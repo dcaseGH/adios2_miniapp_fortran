@@ -1,0 +1,70 @@
+Bootstrap: docker
+From: spack/ubuntu-bionic:latest
+
+#%files
+#/opt/spack-environment /opt/spack-environment
+#/opt/software /opt/software
+#/opt/._view /opt/._view
+#/opt/view /opt/view
+#/etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
+
+
+%post
+# Build stage with Spack pre-installed and ready to be used
+# Bootstrap: docker
+
+
+# What we want to install and how we want to install it
+# is specified in a manifest file (spack.yaml)
+pwd
+echo 'About to do something'
+ls
+mkdir /opt/spack-environment \
+&&  (echo "spack:" \
+&&   echo "  packages:" \
+&&   echo "    all:" \
+&&   echo "      compiler:" \
+&&   echo "      - gnu" \
+&&   echo "      variants:" \
+&&   echo "      - +strip" \
+&&   echo "  specs:" \
+&&   echo "  - mpich@3.4.2" \
+&&   echo "  - hdf5+mpi ^mpich@3.4.2" \
+&&   echo "  - adios2+hdf5 ^mpich@3.4.2" \
+&&   echo "  - valgrind ^mpich@3.4.2" \
+&&   echo "  - gdb" \
+&&   echo "  - reframe" \
+&&   echo "  concretizer:" \
+&&   echo "    unify: true" \
+&&   echo "  concretization: together" \
+&&   echo "  config:" \
+&&   echo "    install_tree: /opt/software" \
+&&   echo "  view: /opt/view") > /opt/spack-environment/spack.yaml
+
+# Note - cant copy files for profile at top so sourcing the setup-env.sh as a hack
+# Install the software, remove unnecessary deps
+cd /opt/spack-environment && \
+. /opt/spack/share/spack/setup-env.sh && \
+spack env activate . && \
+spack install --fail-fast && \
+spack gc -y
+
+# Strip all the binaries
+find -L /opt/view/* -type f -exec readlink -f '{}' \; | \
+xargs file -i | \
+grep 'charset=binary' | \
+grep 'x-executable\|x-archive\|x-sharedlib' | \
+awk -F: '{print $1}' | xargs strip -s
+
+# Modifications to the environment that are necessary to run
+cd /opt/spack-environment && \
+spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh
+
+# Bare OS image to run the installed executables
+
+
+
+%runscript
+exec /bin/bash --rcfile /etc/profile -l -c $* -- /bin/bash "$@"
+%startscript
+exec /bin/bash --rcfile /etc/profile -l -c $* -- /bin/bash "$@"
