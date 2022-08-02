@@ -44,6 +44,7 @@ program main
      stop 'pass arguments so that decomposition in x * y = number of ranks'
   end if
 
+  ! For now set simple initial data (rank dependent)
   local_data%Temp = dble(my_rank)
 
   call adios2_init( adios, MPI_COMM_WORLD, ierr )
@@ -51,7 +52,9 @@ program main
   call adios2_declare_io( ioPut, adios, 'TempWrite', ierr )
      !declare hdf5 engine: try sst at some point? or compare to bp?
   ! note if container not set up properly, cant do this!
+#ifdef HDF5
   call adios2_set_engine(ioPut, 'HDF5', ierr)
+#endif
   ! also set params - threads etc??
 
   !adios variables have global shape and local start and count
@@ -82,11 +85,15 @@ program main
                                ijkshape, ijkstart, ijkcount, adios2_constant_dims, &
                                ierr )
 
+#ifdef HDF5
+  if (my_rank .eq. 0) write(0,*) "Writing output in HDF5 format"
   call adios2_open( bpWriter, ioPut, 'initial_dat.hdf5', adios2_mode_write, &
                     ierr )
-!  call adios2_open( bpWriter, ioPut, 'initial_dat.bp', adios2_mode_write, &
-!                    ierr )
-
+#else
+  if (my_rank .eq. 0) write(0,*) "Writing output in BP format"
+  call adios2_open( bpWriter, ioPut, 'initial_dat.bp', adios2_mode_write, &
+                    ierr )
+#endif
   call adios2_begin_step(bpWriter, ierr)
   call adios2_put( bpWriter, temperature,      local_data%Temp,     ierr )
   call adios2_put( bpWriter, temperature_full, local_data%Temp,     ierr )

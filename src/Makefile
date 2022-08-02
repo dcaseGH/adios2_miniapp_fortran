@@ -1,9 +1,9 @@
 # Compiler
 CC   = mpif90
-OPTS = -g
+OPTS = -g $(CPPFLAGS)
 
 # Project name
-PROJECT = adios2_miniapp
+PROJECT = adios2_miniapp.exe
 
 # Libraries
 LIBS = `adios2-config --fortran-libs` -L/opt/view/lib
