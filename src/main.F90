@@ -21,6 +21,9 @@ program main
   TYPE(data_object)  :: local_data
   double precision   :: edge_temp
 
+  !in built profile
+  integer(8)   :: time_start, time_end, system_count_rate
+
   !declare adios variables
   type(adios2_adios) :: adios
   type(adios2_io) :: ioPut, ioGet
@@ -29,11 +32,15 @@ program main
   integer(kind=8), dimension(2) :: ishape, istart, icount
   integer(kind=8), dimension(3) :: ijkshape, ijkstart, ijkcount
 
-
   call MPI_INIT(ierr)
   call MPI_COMM_RANK (MPI_COMM_WORLD, my_rank, ierr)
   call MPI_COMM_SIZE (MPI_COMM_WORLD, num_ranks, ierr)
-  if (my_rank .eq. 0)  write(0,*) 'Running an ADIOS2 miniapp - eg command mpirun -np 2 [exe] 1 2'
+  if (my_rank .eq. 0) THEN
+        write(0,*) 'Running an ADIOS2 miniapp - eg command mpirun -np 2 [exe] 1 2'
+        ! Timing
+        call system_clock(count_rate=system_count_rate)
+        call system_clock(time_start)
+  end if
 
   write(0,*) "Running with rank ", my_rank, " of ", num_ranks
   call local_settings%define_local_settings(my_rank)
@@ -137,6 +144,10 @@ program main
 
   call adios2_close( bpWriter, ierr )
 
+  if (my_rank .eq. 0) THEN
+    call system_clock(time_end)
+    write(0,*) 'Wallclock time (s): ', ( dble(time_end) - dble(time_start) )/dble(system_count_rate)
+  end if
   call MPI_FINALIZE ( ierr )
 
 end program
